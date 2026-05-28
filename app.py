@@ -1,4 +1,7 @@
 import streamlit as st
+from database import init_db, store_exists, add_store, add_hire
+
+init_db()
 
 st.title("New Store - Manager Form")
 store_name = st.text_input("Store Name")
@@ -105,15 +108,29 @@ if st.button("Submit New Store"):
         errors.append("Store name is required.")
     if need_rgm + need_argm + need_sup + need_tm == 0:
         errors.append("Enter how many staff are needed.")
+    if store_name != "" and store_exists(store_name):
+        errors.append("A store with this name already exists.")
 
     for emp in all_employees:
         if emp["name"] == "":
             errors.append("Every hire needs a name.")
             break                                 
-
+   
 
     if errors:                                    
         for e in errors:
             st.error(e)
     else:
-        st.success("All fields valid! (saving comes next)")
+        add_store(store_name, country, target_open,
+                  need_rgm, need_argm, need_sup, need_tm,
+                  hired_rgm, hired_argm, hired_sup, hired_tm)
+        for emp in all_employees:
+            add_hire(store_name, emp["role"], emp["name"],
+                     emp["background"], emp["start_date"])
+        st.success(f"Store '{store_name}' created!")
+
+import pandas as pd
+from database import get_conn
+st.subheader("DEBUG — what's in the database")
+st.dataframe(pd.read_sql("SELECT * FROM stores", get_conn()))
+st.dataframe(pd.read_sql("SELECT * FROM hires", get_conn()))

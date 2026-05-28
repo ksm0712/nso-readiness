@@ -1,13 +1,14 @@
 from datetime import date
+from html import escape
 
 import streamlit as st
 
-from database import add_hire, get_hires, get_store, update_hired_counts
+from database import add_hire, delete_hire, get_hires, get_store, sync_hired_counts, update_hire
 from date_format import format_date
 from navigation import hide_sidebar
 from readiness import get_readiness
 from status_badge import show_status_badge, show_summary_box
-from ui import labeled_text, page_intro, show_headcount_cell, show_hires_table
+from ui import labeled_text, page_intro, show_headcount_cell
 
 st.set_page_config(page_title="NSO Readiness")
 hide_sidebar()
@@ -55,11 +56,217 @@ def hire_inputs(role, amount, key_prefix):
     return hires
 
 
-selected_store = st.session_state.get("selected_store")
+def option_index(options, value):
+    if value in options:
+        return options.index(value)
+    return 0
+
+
+ROLE_LIMIT_FIELDS = {
+    "RGM": "need_rgm",
+    "ARGM": "need_argm",
+    "Supervisor": "need_sup",
+    "Team Member": "need_tm",
+}
+
+
+def role_counts_without_hire(hires, hire_id):
+    counts = {role: 0 for role in ROLE_LIMIT_FIELDS}
+    for hire in hires:
+        if hire["id"] == hire_id:
+            continue
+        counts[hire["role"]] = counts.get(hire["role"], 0) + 1
+    return counts
+
+
+def available_roles_for_hire(store, hires, hire):
+    counts = role_counts_without_hire(hires, hire["id"])
+    available = []
+    for role, need_field in ROLE_LIMIT_FIELDS.items():
+        has_open_seat = counts.get(role, 0) < store[need_field]
+        if role == hire["role"] or has_open_seat:
+            available.append(role)
+    return available
+
+
+def edit_hire_form(store, hires, hire):
+    hire_id = hire["id"]
+    roles = available_roles_for_hire(store, hires, hire)
+    backgrounds = ["Retail", "F&B", "Cafe", "None"]
+
+    with st.container(border=True):
+        st.markdown(
+            f"""
+            <div class="edit-panel-title">Edit employee</div>
+            <div class="edit-panel-name">{escape(hire["name"])}</div>
+            """,
+            unsafe_allow_html=True,
+        )
+        with st.form(f"edit_hire_form_{hire_id}"):
+            top_left, top_right = st.columns(2)
+            with top_left:
+                role = st.selectbox(
+                    "Role",
+                    roles,
+                    index=option_index(roles, hire["role"]),
+                    key=f"edit_{hire_id}_role",
+                )
+            with top_right:
+                background = st.selectbox(
+                    "Background",
+                    backgrounds,
+                    index=option_index(backgrounds, hire["background"]),
+                    key=f"edit_{hire_id}_background",
+                )
+
+            name = st.text_input("Name", value=hire["name"], key=f"edit_{hire_id}_name")
+
+            date_left, date_right = st.columns([1, 2])
+            with date_left:
+                training_started = st.checkbox(
+                    "Training Started?",
+                    value=hire["start_date"] is not None,
+                    key=f"edit_{hire_id}_started",
+                )
+            start_date = None
+            with date_right:
+                if training_started:
+                    start_date = st.date_input(
+                        "Training Start Date",
+                        value=read_date(hire["start_date"]) or date.today(),
+                        max_value="today",
+                        key=f"edit_{hire_id}_start",
+                    )
+
+            save_col, cancel_col, spacer = st.columns([1, 1, 4])
+            save = save_col.form_submit_button(
+                "Save",
+                key=f"save_hire_{hire_id}",
+                type="primary",
+                icon=":material/check:",
+                use_container_width=True,
+            )
+            cancel = cancel_col.form_submit_button(
+                "Cancel",
+                key=f"cancel_hire_{hire_id}",
+                icon=":material/close:",
+                use_container_width=True,
+            )
+
+    if save:
+        if name.strip() == "":
+            st.error("Employee name cannot be blank.")
+            return
+        counts = role_counts_without_hire(hires, hire_id)
+        if counts.get(role, 0) >= store[ROLE_LIMIT_FIELDS[role]]:
+            st.error(f"{role} is already fully staffed for this store.")
+            return
+        update_hire(hire_id, role, name.strip(), background, start_date)
+        sync_hired_counts(hire["store_name"])
+        st.session_state.edit_hire_id = None
+        st.success("Employee updated.")
+        st.rerun()
+
+    if cancel:
+        st.session_state.edit_hire_id = None
+        st.rerun()
+
+
+@st.dialog("Confirm remove employee")
+def confirm_remove_employee(hire):
+    st.markdown(
+        f"""
+        <div class="confirm-remove-copy">
+            Remove <strong>{escape(hire["name"])}</strong> from this store's hiring plan?
+        </div>
+        <div class="confirm-remove-note">
+            This will update the store headcount and readiness status immediately.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    remove_col, cancel_col = st.columns([1, 1])
+    if remove_col.button(
+        "Remove employee",
+        key=f"confirm_remove_hire_{hire['id']}",
+        type="primary",
+        icon=":material/delete:",
+        use_container_width=True,
+    ):
+        delete_hire(hire["id"])
+        sync_hired_counts(hire["store_name"])
+        st.session_state.remove_hire_id = None
+        st.success("Employee removed.")
+        st.rerun()
+    if cancel_col.button(
+        "Cancel",
+        key=f"cancel_remove_hire_{hire['id']}",
+        icon=":material/close:",
+        use_container_width=True,
+    ):
+        st.session_state.remove_hire_id = None
+        st.rerun()
+
+
+def show_editable_hires(store, hires):
+    st.html(
+        """
+        <div class="hires-table hires-table-shell">
+            <div class="hires-grid hires-grid-header">
+                <div>Role</div>
+                <div>Employee</div>
+                <div>Background</div>
+                <div>Training Start</div>
+                <div>Actions</div>
+            </div>
+        </div>
+        """
+    )
+
+    for hire in hires:
+        with st.container(border=True):
+            role_col, name_col, background_col, start_col, actions_col = st.columns([1.2, 1.35, 1.2, 1.25, 0.8])
+            with role_col:
+                st.markdown(f"**{hire['role']}**")
+            with name_col:
+                st.markdown(f"**{hire['name']}**")
+            with background_col:
+                st.markdown(f"**{hire['background']}**")
+            with start_col:
+                if hire["start_date"]:
+                    st.markdown(f"**{format_date(hire['start_date'])}**")
+                else:
+                    st.markdown('<span class="muted-cell">Not started</span>', unsafe_allow_html=True)
+            with actions_col:
+                edit_col, remove_col = st.columns([1, 1])
+                if edit_col.button(
+                    "Edit",
+                    key=f"edit_hire_{hire['id']}",
+                    help=f"Edit {hire['name']}",
+                ):
+                    st.session_state.edit_hire_id = hire["id"]
+                    st.rerun()
+                if remove_col.button(
+                    "Remove",
+                    key=f"remove_hire_{hire['id']}",
+                    help=f"Remove {hire['name']}",
+                ):
+                    st.session_state.remove_hire_id = hire["id"]
+                    st.rerun()
+
+        if st.session_state.get("edit_hire_id") == hire["id"]:
+            edit_hire_form(store, hires, hire)
+        if st.session_state.get("remove_hire_id") == hire["id"]:
+            confirm_remove_employee(hire)
+
+
+selected_store = st.query_params.get("store") or st.session_state.get("selected_store")
 
 if not selected_store:
-    st.warning("Open a store from the All Stores page first.")
+    st.switch_page("app.py")
     st.stop()
+
+st.session_state.selected_store = selected_store
 
 store = get_store(selected_store)
 
@@ -115,7 +322,7 @@ with st.container(border=True):
 
 if existing_hires:
     st.subheader("Current hires")
-    show_hires_table(existing_hires)
+    show_editable_hires(store, existing_hires)
 
 st.subheader("Add more hired employees")
 remaining_rgm = max(0, store["need_rgm"] - store["hired_rgm"])
@@ -158,12 +365,6 @@ if st.button("Save New Hires", type="primary"):
                 hire["start_date"],
             )
 
-        update_hired_counts(
-            store["store_name"],
-            store["hired_rgm"] + add_rgm,
-            store["hired_argm"] + add_argm,
-            store["hired_sup"] + add_sup,
-            store["hired_tm"] + add_tm,
-        )
+        sync_hired_counts(store["store_name"])
         st.success("New hires saved.")
         st.rerun()

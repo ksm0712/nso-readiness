@@ -130,13 +130,13 @@ header_col, action_col = st.columns([4, 1])
 with header_col:
     page_intro(
         "People Readiness",
-        "Store Opening Dashboard",
+        "New Store Opening Dashboard",
         "Track hiring, training completion, and launch risk across upcoming stores.",
     )
 with action_col:
     st.write("")
     st.write("")
-    if st.button("Add New Store", type="primary", use_container_width=True):
+    if st.button("Add New Store", key="add_new_store_button", type="primary", use_container_width=True):
         st.switch_page("pages/1_New_Store.py")
 
 stores = get_all_stores()
@@ -222,4 +222,5 @@ else:
                 st.write("")
                 if st.button("Open", key=f"open_{store['store_name']}", use_container_width=True):
                     st.session_state.selected_store = store["store_name"]
+                    st.query_params["store"] = store["store_name"]
                     st.switch_page("pages/3_Store_Detail.py")

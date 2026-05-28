@@ -88,6 +88,171 @@ def apply_app_style():
                 color: #ffffff;
             }
 
+            .st-key-add_new_store_button button {
+                background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+                border: 1px solid #1d4ed8 !important;
+                border-radius: 10px !important;
+                box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24) !important;
+                color: #ffffff !important;
+                font-size: 14px !important;
+                font-weight: 800 !important;
+                min-height: 44px !important;
+            }
+
+            .st-key-add_new_store_button button:hover {
+                background: linear-gradient(135deg, #1e40af, #1d4ed8) !important;
+                border-color: #1e40af !important;
+                box-shadow: 0 12px 26px rgba(37, 99, 235, 0.30) !important;
+                color: #ffffff !important;
+            }
+
+            [class*="st-key-edit_hire_"] button,
+            [class*="st-key-remove_hire_"] button {
+                align-items: center !important;
+                border-radius: 999px !important;
+                box-shadow: none !important;
+                display: inline-flex !important;
+                gap: 0 !important;
+                height: 34px !important;
+                justify-content: center !important;
+                line-height: 1 !important;
+                min-height: 34px !important;
+                padding: 0 !important;
+                position: relative !important;
+                width: 34px !important;
+            }
+
+            [class*="st-key-edit_hire_"] button {
+                background: #eff6ff !important;
+                border: 1px solid #bfdbfe !important;
+                color: #1d4ed8 !important;
+            }
+
+            [class*="st-key-edit_hire_"] button:hover {
+                background: #dbeafe !important;
+                border-color: #60a5fa !important;
+                color: #1e40af !important;
+            }
+
+            [class*="st-key-remove_hire_"] button {
+                background: #fef2f2 !important;
+                border: 1px solid #fecaca !important;
+                color: #dc2626 !important;
+            }
+
+            [class*="st-key-remove_hire_"] button:hover {
+                background: #fee2e2 !important;
+                border-color: #fca5a5 !important;
+                color: #b91c1c !important;
+            }
+
+            [class*="st-key-edit_hire_"] button > *,
+            [class*="st-key-remove_hire_"] button > * {
+                display: none !important;
+            }
+
+            [class*="st-key-edit_hire_"] button::before,
+            [class*="st-key-remove_hire_"] button::before {
+                align-items: center !important;
+                content: "";
+                display: flex !important;
+                font-family: "Material Symbols Rounded", "Material Symbols Outlined";
+                font-size: 20px;
+                font-style: normal;
+                font-weight: 400;
+                height: 20px !important;
+                justify-content: center !important;
+                letter-spacing: normal;
+                line-height: 20px !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                text-transform: none;
+                width: 20px !important;
+            }
+
+            [class*="st-key-edit_hire_"] button::before {
+                content: "edit";
+            }
+
+            [class*="st-key-remove_hire_"] button::before {
+                content: "delete";
+            }
+
+            [class*="st-key-confirm_remove_hire_"] button {
+                background: #dc2626 !important;
+                border-color: #dc2626 !important;
+                color: #ffffff !important;
+            }
+
+            [class*="st-key-confirm_remove_hire_"] button:hover {
+                background: #b91c1c !important;
+                border-color: #b91c1c !important;
+                color: #ffffff !important;
+            }
+
+            [class*="st-key-save_hire_"] button {
+                background: #1d4ed8 !important;
+                border-color: #1d4ed8 !important;
+                color: #ffffff !important;
+                font-weight: 800 !important;
+            }
+
+            [class*="st-key-save_hire_"] button:hover {
+                background: #1e40af !important;
+                border-color: #1e40af !important;
+                color: #ffffff !important;
+            }
+
+            [class*="st-key-cancel_hire_"] button,
+            [class*="st-key-cancel_remove_hire_"] button {
+                background: #ffffff !important;
+                border-color: #cbd5e1 !important;
+                color: #334155 !important;
+                font-weight: 800 !important;
+            }
+
+            [class*="st-key-cancel_hire_"] button:hover,
+            [class*="st-key-cancel_remove_hire_"] button:hover {
+                background: #f8fafc !important;
+                border-color: #94a3b8 !important;
+                color: #0f172a !important;
+            }
+
+            .edit-panel-title {
+                color: #64748b;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: .08em;
+                margin-bottom: 2px;
+                text-transform: uppercase;
+            }
+
+            .edit-panel-name {
+                color: #111827;
+                font-size: 18px;
+                font-weight: 800;
+                margin-bottom: 14px;
+            }
+
+            .confirm-remove-copy {
+                color: #111827;
+                font-size: 16px;
+                line-height: 1.45;
+                margin-bottom: 8px;
+            }
+
+            .confirm-remove-note {
+                background: #fef2f2;
+                border: 1px solid #fecaca;
+                border-radius: 8px;
+                color: #991b1b;
+                font-size: 13px;
+                font-weight: 700;
+                line-height: 1.45;
+                margin-bottom: 16px;
+                padding: 10px 12px;
+            }
+
             [data-testid="stButtonGroup"] {
                 margin-bottom: 2px;
             }
@@ -415,6 +580,30 @@ def apply_app_style():
                 border-radius: 10px;
                 background: #ffffff;
                 box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+            }
+
+            .hires-table-shell {
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+                box-shadow: none;
+                margin-bottom: 8px;
+            }
+
+            .hires-grid {
+                display: grid;
+                grid-template-columns: 1.2fr 1.35fr 1.2fr 1.25fr 1fr;
+                column-gap: 18px;
+                align-items: center;
+            }
+
+            .hires-grid-header {
+                background: #f8fafc;
+                color: #475569;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: .06em;
+                padding: 13px 14px;
+                text-transform: uppercase;
             }
 
             .hires-table th {

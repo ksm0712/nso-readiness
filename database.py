@@ -89,11 +89,34 @@ def get_store(store_name):
 def get_hires(store_name):
     conn = get_conn()
     rows = conn.execute(
-        "SELECT role, name, background, start_date FROM hires WHERE store_name = ?",
+        """SELECT id, store_name, role, name, background, start_date
+           FROM hires
+           WHERE store_name = ?
+           ORDER BY id""",
         (store_name,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def update_hire(hire_id, role, name, background, start_date):
+    conn = get_conn()
+    conn.execute(
+        """UPDATE hires
+           SET role = ?, name = ?, background = ?, start_date = ?
+           WHERE id = ?""",
+        (role, name, background, str(start_date) if start_date else None, hire_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_hire(hire_id):
+    conn = get_conn()
+    conn.execute("DELETE FROM hires WHERE id = ?", (hire_id,))
+    conn.commit()
+    conn.close()
+
 
 def update_hired_counts(store_name, hired_rgm, hired_argm, hired_sup, hired_tm):
     conn = get_conn()
@@ -102,6 +125,32 @@ def update_hired_counts(store_name, hired_rgm, hired_argm, hired_sup, hired_tm):
            SET hired_rgm = ?, hired_argm = ?, hired_sup = ?, hired_tm = ?
            WHERE store_name = ?""",
         (hired_rgm, hired_argm, hired_sup, hired_tm, store_name),
+    )
+    conn.commit()
+    conn.close()
+
+
+def sync_hired_counts(store_name):
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT role, COUNT(*) AS count
+           FROM hires
+           WHERE store_name = ?
+           GROUP BY role""",
+        (store_name,),
+    ).fetchall()
+    counts = {row["role"]: row["count"] for row in rows}
+    conn.execute(
+        """UPDATE stores
+           SET hired_rgm = ?, hired_argm = ?, hired_sup = ?, hired_tm = ?
+           WHERE store_name = ?""",
+        (
+            counts.get("RGM", 0),
+            counts.get("ARGM", 0),
+            counts.get("Supervisor", 0),
+            counts.get("Team Member", 0),
+            store_name,
+        ),
     )
     conn.commit()
     conn.close()

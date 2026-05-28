@@ -1,11 +1,16 @@
 from datetime import date
 
-import pandas as pd
 import streamlit as st
 
 from database import add_hire, get_hires, get_store, update_hired_counts
+from date_format import format_date
+from navigation import hide_sidebar
+from readiness import get_readiness
+from status_badge import show_status_badge, show_summary_box
+from ui import labeled_text, page_intro, show_headcount_cell, show_hires_table
 
-COUNTRIES = ["Malaysia", "Indonesia", "Philippines", "Thailand", "Singapore"]
+st.set_page_config(page_title="NSO Readiness")
+hide_sidebar()
 
 
 def read_date(date_text):
@@ -29,7 +34,7 @@ def hire_inputs(role, amount, key_prefix):
                 key=f"{key_prefix}_{i}_background",
             )
             start_date = None
-            training_started = st.toggle(
+            training_started = st.checkbox(
                 "Training Started?",
                 key=f"{key_prefix}_{i}_started",
             )
@@ -62,40 +67,55 @@ if store is None:
     st.error("This store was not found.")
     st.stop()
 
-st.title(store["store_name"])
+top_col, back_col = st.columns([4, 1])
+with top_col:
+    page_intro(
+        "Store Detail",
+        store["store_name"],
+        "Review opening readiness and add newly hired employees to the plan.",
+    )
+with back_col:
+    st.write("")
+    st.write("")
+    if st.button("Back to Stores", use_container_width=True):
+        st.switch_page("app.py")
 
-st.subheader("Store details")
-st.text_input("Store Name", value=store["store_name"], disabled=True)
-st.selectbox(
-    "Country",
-    COUNTRIES,
-    index=COUNTRIES.index(store["country"]) if store["country"] in COUNTRIES else 0,
-    disabled=True,
-)
-st.date_input(
-    "Target Opening Date",
-    value=read_date(store["target_open"]),
-    disabled=True,
-)
+with st.container(border=True):
+    st.subheader("Store details")
+    detail_1, detail_2, detail_3 = st.columns(3)
+    with detail_1:
+        labeled_text("Store", store["store_name"])
+    with detail_2:
+        labeled_text("Market", store["country"])
+    with detail_3:
+        labeled_text("Target Open", format_date(store["target_open"]))
 
-st.subheader("Headcount needed")
-c1, c2, c3, c4 = st.columns(4)
-c1.number_input("RGM", value=store["need_rgm"], disabled=True)
-c2.number_input("ARGM", value=store["need_argm"], disabled=True)
-c3.number_input("Supervisor", value=store["need_sup"], disabled=True)
-c4.number_input("Team Member", value=store["need_tm"], disabled=True)
-
-st.subheader("Hired so far")
-h1, h2, h3, h4 = st.columns(4)
-h1.number_input("RGM", value=store["hired_rgm"], disabled=True)
-h2.number_input("ARGM", value=store["hired_argm"], disabled=True)
-h3.number_input("Supervisor", value=store["hired_sup"], disabled=True)
-h4.number_input("Team Member", value=store["hired_tm"], disabled=True)
+with st.container(border=True):
+    st.subheader("Headcount")
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        show_headcount_cell("RGM", store["hired_rgm"], store["need_rgm"])
+    with c2:
+        show_headcount_cell("ARGM", store["hired_argm"], store["need_argm"])
+    with c3:
+        show_headcount_cell("Supervisor", store["hired_sup"], store["need_sup"])
+    with c4:
+        show_headcount_cell("Team Member", store["hired_tm"], store["need_tm"])
 
 existing_hires = get_hires(store["store_name"])
+readiness = get_readiness(store, existing_hires)
+
+with st.container(border=True):
+    st.subheader("Opening readiness")
+    show_status_badge(readiness["status"])
+    show_summary_box(readiness)
+    with st.expander("Progress details"):
+        for detail in readiness["details"]:
+            st.write(detail)
+
 if existing_hires:
     st.subheader("Current hires")
-    st.dataframe(pd.DataFrame(existing_hires), use_container_width=True)
+    show_hires_table(existing_hires)
 
 st.subheader("Add more hired employees")
 remaining_rgm = max(0, store["need_rgm"] - store["hired_rgm"])
@@ -104,10 +124,10 @@ remaining_sup = max(0, store["need_sup"] - store["hired_sup"])
 remaining_tm = max(0, store["need_tm"] - store["hired_tm"])
 
 a1, a2, a3, a4 = st.columns(4)
-add_rgm = a1.number_input("RGM", min_value=0, max_value=remaining_rgm, step=1, key="add_rgm")
-add_argm = a2.number_input("ARGM", min_value=0, max_value=remaining_argm, step=1, key="add_argm")
-add_sup = a3.number_input("Supervisor", min_value=0, max_value=remaining_sup, step=1, key="add_sup")
-add_tm = a4.number_input("Team Member", min_value=0, max_value=remaining_tm, step=1, key="add_tm")
+add_rgm = a1.selectbox("RGM", range(remaining_rgm + 1), key="add_rgm")
+add_argm = a2.selectbox("ARGM", range(remaining_argm + 1), key="add_argm")
+add_sup = a3.selectbox("Supervisor", range(remaining_sup + 1), key="add_sup")
+add_tm = a4.selectbox("Team Member", range(remaining_tm + 1), key="add_tm")
 
 new_hires = []
 new_hires += hire_inputs("RGM", add_rgm, "new_rgm")
@@ -115,7 +135,7 @@ new_hires += hire_inputs("ARGM", add_argm, "new_argm")
 new_hires += hire_inputs("Supervisor", add_sup, "new_sup")
 new_hires += hire_inputs("Team Member", add_tm, "new_tm")
 
-if st.button("Save New Hires"):
+if st.button("Save New Hires", type="primary"):
     errors = []
     if add_rgm + add_argm + add_sup + add_tm == 0:
         errors.append("Choose at least one employee to add.")

@@ -1,28 +1,43 @@
 import streamlit as st
 from database import init_db, store_exists, add_store, add_hire
+from navigation import hide_sidebar
+from ui import page_intro
 
+
+st.set_page_config(page_title="NSO Readiness")
 init_db()
+hide_sidebar()
 
-st.title("New Store - Manager Form")
+top_col, back_col = st.columns([4, 1])
+with top_col:
+    page_intro(
+        "New Store Setup",
+        "Create Store Opening Plan",
+        "Add the store profile, required staffing levels, and any employees already hired.",
+    )
+with back_col:
+    st.write("")
+    st.write("")
+    if st.button("Back to Stores", use_container_width=True):
+        st.switch_page("app.py")
+
 store_name = st.text_input("Store Name")
 country = st.selectbox("Country", ["Malaysia", "Indonesia", "Philippines", "Thailand", "Singapore"])
 target_open = st.date_input("Target Opening Date")
 
 st.subheader("Headcount needed")
 c1, c2, c3, c4 = st.columns(4)
-need_rgm = c1.number_input("RGM", min_value=0, step=1, key="need_rgm")
-need_argm = c2.number_input("ARGM", min_value=0, step=1, key="need_argm")
-need_sup = c3.number_input("Supervisor", min_value=0, step=1, key="need_sup")
-need_tm = c4.number_input("Team Member", min_value=0, step=1, key="need_tm")
+need_rgm = c1.selectbox("RGM", range(51), key="need_rgm")
+need_argm = c2.selectbox("ARGM", range(51), key="need_argm")
+need_sup = c3.selectbox("Supervisor", range(51), key="need_sup")
+need_tm = c4.selectbox("Team Member", range(51), key="need_tm")
 
 st.subheader("Hired so far")
 h1, h2, h3, h4 = st.columns(4)
-hired_rgm = h1.number_input("RGM", min_value=0, max_value=need_rgm, step=1, key="hired_rgm")
-hired_argm = h2.number_input("ARGM", min_value=0, max_value=need_argm, step=1, key="hired_argm")
-hired_sup = h3.number_input("Supervisor", min_value=0, max_value=need_sup,step=1, key="hired_sup")
-hired_tm = h4.number_input("Team Member", min_value=0, max_value=need_tm, step=1, key="hired_tm")
-# rgm_needed = st.number_input("RGM Needed", min_value=0, step=1)
-
+hired_rgm = h1.selectbox("RGM", range(need_rgm + 1), key="hired_rgm")
+hired_argm = h2.selectbox("ARGM", range(need_argm + 1), key="hired_argm")
+hired_sup = h3.selectbox("Supervisor", range(need_sup + 1), key="hired_sup")
+hired_tm = h4.selectbox("Team Member", range(need_tm + 1), key="hired_tm")
 rgm_list = []
 if hired_rgm > 0:
     with st.expander(f"RGM Hires"):
@@ -32,7 +47,7 @@ if hired_rgm > 0:
             rgm_name = st.text_input("Name", key=f"rgm_{i+1}_name")
             rgm_bg = st.selectbox("Background", ["Retail", "F&B", "Cafe", "None"], key=f"rgm_{i+1}_bg")
             rgm_start_date = None
-            rgm_started = st.toggle("Training Started?", key=f"rgm_{i+1}_started")
+            rgm_started = st.checkbox("Training Started?", key=f"rgm_{i+1}_started")
             if rgm_started:
                 rgm_start_date = st.date_input("Training Start Date", key=f"rgm_start_{i+1}", max_value="today")
             rgm_list.append({
@@ -51,7 +66,7 @@ if hired_argm > 0:
             argm_name = st.text_input("Name", key=f"argm_{i+1}_name")
             argm_bg = st.selectbox("Background", ["Retail", "F&B", "Cafe", "None"], key=f"argm_{i+1}_bg")
             argm_start_date = None
-            argm_started = st.toggle("Training Started?", key=f"argm_{i+1}_started")
+            argm_started = st.checkbox("Training Started?", key=f"argm_{i+1}_started")
             if argm_started:
                 argm_start_date = st.date_input("Training Start Date", key=f"argm_start_{i+1}", max_value="today")
 
@@ -71,7 +86,7 @@ if hired_sup > 0:
             sup_name = st.text_input("Name", key=f"sup_{i+1}_name")
             sup_bg = st.selectbox("Background", ["Retail", "F&B", "Cafe", "None"], key=f"sup_{i+1}_bg")
             sup_start_date = None
-            sup_started = st.toggle("Training Started?", key=f"sup_{i+1}_started")
+            sup_started = st.checkbox("Training Started?", key=f"sup_{i+1}_started")
             if sup_started:
                 sup_start_date = st.date_input("Training Start Date", key=f"sup_start_{i+1}", max_value="today")
             sup_list.append({
@@ -90,7 +105,7 @@ if hired_tm > 0:
             tm_name = st.text_input("Name", key=f"tm_{i+1}_name")
             tm_bg = st.selectbox("Background", ["Retail", "F&B", "Cafe", "None"], key=f"tm_{i+1}_bg")
             tm_start_date = None
-            tm_started = st.toggle("Training Started?", key=f"tm_{i+1}_started")
+            tm_started = st.checkbox("Training Started?", key=f"tm_{i+1}_started")
             if tm_started:
                 tm_start_date = st.date_input("Training Start Date", key=f"tm_start_{i+1}", max_value="today")
             tm_list.append({
@@ -102,7 +117,7 @@ if hired_tm > 0:
 
 all_employees = rgm_list + argm_list + sup_list + tm_list
 
-if st.button("Submit New Store"):
+if st.button("Submit New Store", type="primary"):
     errors = []                                   
     if store_name == "":
         errors.append("Store name is required.")
@@ -128,9 +143,4 @@ if st.button("Submit New Store"):
             add_hire(store_name, emp["role"], emp["name"],
                      emp["background"], emp["start_date"])
         st.success(f"Store '{store_name}' created!")
-
-import pandas as pd
-from database import get_conn
-st.subheader("DEBUG — what's in the database")
-st.dataframe(pd.read_sql("SELECT * FROM stores", get_conn()))
-st.dataframe(pd.read_sql("SELECT * FROM hires", get_conn()))
+        st.switch_page("app.py")

@@ -98,3 +98,22 @@ if hired_tm > 0:
             })
 
 all_employees = rgm_list + argm_list + sup_list + tm_list
+
+if st.button("Submit New Store"):
+    errors = []                                   
+    if store_name == "":
+        errors.append("Store name is required.")
+    if need_rgm + need_argm + need_sup + need_tm == 0:
+        errors.append("Enter how many staff are needed.")
+
+    for emp in all_employees:
+        if emp["name"] == "":
+            errors.append("Every hire needs a name.")
+            break                                 
+
+
+    if errors:                                    
+        for e in errors:
+            st.error(e)
+    else:
+        st.success("All fields valid! (saving comes next)")

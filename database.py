@@ -69,3 +69,39 @@ def add_hire(store_name, role, name, background, start_date):
     )
     conn.commit()
     conn.close()
+
+def get_all_stores():
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM stores").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_store(store_name):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM stores WHERE store_name = ?", (store_name,)
+    ).fetchone()
+    conn.close()
+    if row is None:
+        return None
+    return dict(row)
+
+def get_hires(store_name):
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT role, name, background, start_date FROM hires WHERE store_name = ?",
+        (store_name,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def update_hired_counts(store_name, hired_rgm, hired_argm, hired_sup, hired_tm):
+    conn = get_conn()
+    conn.execute(
+        """UPDATE stores
+           SET hired_rgm = ?, hired_argm = ?, hired_sup = ?, hired_tm = ?
+           WHERE store_name = ?""",
+        (hired_rgm, hired_argm, hired_sup, hired_tm, store_name),
+    )
+    conn.commit()
+    conn.close()
